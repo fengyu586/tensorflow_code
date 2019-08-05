@@ -7,3 +7,4 @@
 # @IDE: PyCharm
 ======================================="""
 import tensorflow as tf
+slim = tf.contrib.slim
