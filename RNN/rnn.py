@@ -8,8 +8,6 @@
 ======================================="""
 import numpy as np
 import tensorflow as tf
-import matplotlib as mpl
-mpl.use('Agg')
 from matplotlib import pyplot as plt
 
 HIDDEN_SIZE = 30
