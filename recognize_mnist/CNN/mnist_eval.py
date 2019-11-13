@@ -19,43 +19,31 @@ EVAL_INTERVAL_SECS = 2
 
 
 def evaluate(mnist):
-    with tf.Graph().as_default() as g:
-        x_ = tf.placeholder(tf.float32, [None, mnist_inference.INPUT_NODE], name='x-input')
-        x = tf.reshape(x_, [-1, mnist_inference.IMAGE_SIZE, mnist_inference.IMAGE_SIZE, 1])
-        y_ = tf.placeholder(tf.float32, [None, mnist_inference.OUTPUT_NODE], name='y-input')
-        validate_feed = {x_: mnist.validation.images, y_: mnist.validation.labels}
-
-        # forward
-        y = mnist_inference.inference(x, False, None)
-
-        # predict
-        correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
-        # load model by rename the variable
-        variable_averages = tf.train.ExponentialMovingAverage(mnist_train.MOVING_AVERAGE_DECAY)
-        variables_to_restore = variable_averages.variables_to_restore()
-        saver = tf.train.Saver(variables_to_restore)
+        # load model by ren                y_output = graph.get_tensor_by_name("y-output")ame the variable
+        saver = tf.train.import_meta_graph('model/cnn_model.ckpt-29000.meta')
 
         # compute accuracy for each 10 seconds
-        while True:
-            with tf.Session() as sess:
+        with tf.Session() as sess:
+            # get the name of the most newest model file
+            ckpt = tf.train.get_checkpoint_state(mnist_train.MODEL_SAVE_PATH)
 
-                # get the name of the most newest model file
-                ckpt = tf.train.get_checkpoint_state(mnist_train.MODEL_SAVE_PATH)
+            if ckpt and ckpt.model_checkpoint_path:
 
-                if ckpt and ckpt.model_checkpoint_path:
-
-                    # load the model
-                    saver.restore(sess, ckpt.model_checkpoint_path)
-                    global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
-                    accuracy_score = sess.run(accuracy, feed_dict=validate_feed)
-                    print('After %s training step(s), validation accuracy = %g'
-                          % (global_step, accuracy_score))
-                else:
-                    print('No checkpoint file found')
-                    return
-            time.sleep(EVAL_INTERVAL_SECS)
+                # load the model
+                saver.restore(sess, ckpt.model_checkpoint_path)
+                graph = tf.get_default_graph()
+                x_input = graph.get_tensor_by_name("x-input:0")
+                y_input = graph.get_tensor_by_name("y-input:0")
+                y_output = graph.get_tensor_by_name("layer6-fc2/y_output:0")
+                validate_feed = {x_input: mnist.validation.images, y_input: mnist.validation.labels}
+                correct_prediction = tf.equal(tf.argmax(y_input, 1), tf.argmax(y_output, 1))
+                accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+                accuracy_score = sess.run(accuracy, feed_dict=validate_feed)
+                print('validation accuracy = %g' % accuracy_score)
+            else:
+                print('No checkpoint file found')
+                return
+        time.sleep(EVAL_INTERVAL_SECS)
 
 
 def main(argv=None):

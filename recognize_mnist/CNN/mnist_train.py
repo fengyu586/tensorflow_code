@@ -14,11 +14,9 @@ from recognize_mnist.CNN import mnist_inference
 
 # set the parameters of the network
 BATCH_SIZE = 100
-LEARNING_RATE_BASE = 0.8
-LEARNING_RATE_DECAY = 0.99
 REGULARIZATION_RATE = 0.0001
 TRAINING_STEPS = 30000
-MOVING_AVERAGE_DECAY = 0.99
+LEARNING_RATE = 0.001
 
 # the path for saving model
 MODEL_SAVE_PATH = 'model/'
@@ -35,18 +33,13 @@ def train(mnist):
     global_step = tf.Variable(0, trainable=False)
 
     # define the loss function, learning rate, move average and the process of training
-    variable_averages = tf.train.ExponentialMovingAverage(MOVING_AVERAGE_DECAY, global_step)
-    variable_averages_op = variable_averages.apply(tf.trainable_variables())
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=y, labels=tf.argmax(y_, 1))
     cross_entropy_mean = tf.reduce_mean(cross_entropy)
     loss = cross_entropy_mean+tf.add_n(tf.get_collection('losses'))
-    learning_rate = tf.train.exponential_decay(LEARNING_RATE_BASE, global_step,
-                                               mnist.train.num_examples/BATCH_SIZE,
-                                               LEARNING_RATE_DECAY)
-    train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step)
+    train_step = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
     correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    with tf.control_dependencies([train_step, variable_averages_op]):
+    with tf.control_dependencies([train_step]):
         train_op = tf.no_op(name='train')
 
     # initial
@@ -61,10 +54,10 @@ def train(mnist):
 
             # print the process of training model
             if i % 1000 == 0:
-                print('After %d training step(s), loss on training batch is %g. acc on training batch is %g'
+                print('After %d training step(s), loss on training batch is %g. acc on training batch is %.3f'
                       % (i, loss_value, acc))
                 # save the model after each 1000 steps for training model
-                saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=global_step)
+                saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), i)
 
 
 def main(argv=None):

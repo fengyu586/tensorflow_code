@@ -79,7 +79,7 @@ def inference(input_tensor, train, regularizer):
         if regularizer is not None:
             tf.add_to_collection('losses', regularizer(fc2_weights))
         fc2_biases = tf.get_variable('bias', [NUM_LABELS], initializer=tf.constant_initializer(0.1))
-        logit = tf.matmul(fc1, fc2_weights)+fc2_biases
+        logit = tf.nn.bias_add(tf.matmul(fc1, fc2_weights), fc2_biases, name='y_output')
 
     # output the result
     return logit
